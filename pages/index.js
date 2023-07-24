@@ -4,6 +4,7 @@ import { ListingProducer } from "../ethereum/contracts";
 import Layout from "../components/Layout";
 import { Link } from "../routes";
 import web3 from "../web3";
+import { PropertyListing } from "../ethereum/contracts";
 
 class ListingIndex extends Component {
     static async getInitialProps() {
@@ -24,7 +25,7 @@ class ListingIndex extends Component {
             }
         });
 
-        return <Card.Group items={items} />;
+        return <Card.Group itemsPerRow={1} items={items} />;
      }
 
      render() {

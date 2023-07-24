@@ -12,9 +12,9 @@ export async function invest({ propertyAddress, amount }) {
   });
 }
 
-export async function concludeProperty({ propertyAddress }) {
+export async function unlistProperty({ propertyAddress }) {
   const PropertyContract = PropertyListing(propertyAddress);
-  await PropertyContract.methods.concludeProperty().send({
+  await PropertyContract.methods.unlistProperty().send({
     from: await getActiveAccount(),
   });
 }
