@@ -7,6 +7,7 @@ import { Link } from "../../routes";
 
 const Web3 = require("web3");
 const fromWei = (str) => Web3.utils.fromWei(`${str}`, "ether");
+const imageUrl = 'https://icl-blog.s3.ap-southeast-1.amazonaws.com/uploads/2017/08/Landed-property-coronation-road-small.jpg'
 let name;
 let listingAddresss;
 let description;
@@ -43,7 +44,8 @@ class ListingShow extends Component {
             {
                 header: name,
                 meta: propertyAddress,
-                description: description
+                description: description,
+                image: imageUrl
             },
             {
                 header: balance,

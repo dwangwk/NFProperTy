@@ -95,7 +95,7 @@ export default function ListingNew() {
                         if (event.target.files[0]) {
                           const file = event.target.files[0];
                           if (file.size < 1000000) {
-                            setImage(file);
+                            // setImage(file);
                           } else {
                             popup("Sorry, file size must be under 1MB");
                           }
