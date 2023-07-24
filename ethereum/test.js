@@ -57,7 +57,7 @@ describe(' Listings', () => {
 
     it('listing has correct target amount',  async () => {
         const totalSupply = await listing.methods.targetAmount().call();
-        assert.strictEqual(totalSupply, toWei("0.01"));
+        assert.equal(totalSupply, toWei("0.01"));
     });
 
     it('caller is listing manager', async () => {
@@ -76,7 +76,7 @@ describe(' Listings', () => {
             from: investor,
             ...gas});
         const investedAmount = await web3.eth.getBalance(listing.options.address);
-        assert.strictEqual(investedAmount, toWei("0.005"));
+        assert.equal(investedAmount, toWei("0.005"));
     });
 
     it("allows manager to close listing and refund investors", async () => {
