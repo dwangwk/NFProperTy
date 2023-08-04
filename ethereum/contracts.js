@@ -3,7 +3,7 @@ import contracts from "./build/contracts.json";
 
 const ListingProducer = new web3.eth.Contract(
   contracts.ListingProducer.abi,
-  "0x3b88B41B524b9DF477B489B99b67638A7F0eeD6D"
+  "0x96b5437dd98005Cdf34e7b17D3dDE3bA4cf0dFcA"
 );
 
 const PropertyListing = (listingAddress) => {

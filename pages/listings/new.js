@@ -1,10 +1,13 @@
 import React, {Component, useState, useContext} from "react";
 import Layout from "../../components/Layout";
-import { Form, Button, Input, Message } from "semantic-ui-react";
+import { Card, Form, Button, Input, Message } from "semantic-ui-react";
 import { ListingProducer } from "../../ethereum/contracts";
 import web3 from "../../web3";
 import { AccountContext } from "../../components/context/AccountContext";
 import { Router } from '../../routes';
+import { db, storage } from "../../components/firebase/Firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { doc, setDoc } from 'firebase/firestore'; 
 
 const Web3 = require("web3");
 const toWei = (str) => Web3.utils.toWei(`${str}`, "ether");
@@ -18,16 +21,44 @@ export default function ListingNew() {
     const [propertyAddress, setPropertyAddress] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
     const [loading, setLoading] = React.useState(false);
+    const [previewUrl, setPreviewUrl] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [downloadURL, setDownloadURL] = useState(null);
+    const [listingContractAddress, setListingContractAddress] = useState(null);
+
+    const handleFileChange = (event) => {
+        if (event.target.files[0]) {
+        const file = event.target.files[0];
+        setSelectedImage(file);
+        // Display image preview
+        const reader = new FileReader();
+        reader.onload = () => {
+            setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+        }
+    };
+
 
     const onSubmit = async (event) => {
         setErrorMessage('');
         event.preventDefault();
         setLoading(true);
         try {
+            if (realEstateName.length < 1) {
+                throw Error('Please input Real Estate Name');
+            } else if (propertyAddress.length < 20) {
+                throw Error('Please input Property Address');
+            } else if (description.length < 20) {
+                throw Error('Please input description');
+            } else if (targetAmount < 0.01 ) {
+                throw Error('Please input valid targetAmount (> 0.01 ETH)');
+            } 
+
             const accounts = await web3.eth.getAccounts();
             const account = accounts[0];
-      
-            await ListingProducer
+            
+            const transactionReceipt = await ListingProducer
                 .methods
                 .listProperty(
                     realEstateName,
@@ -37,7 +68,69 @@ export default function ListingNew() {
                 )
             .send({
                 from: account
-            });
+            })
+            .then("receipt", async (receipt) => {
+                setListingContractAddress(receipt.events.ListProperty.returnValues.listingAddress);
+                console.log(listingContractAddress);
+            }).then(
+                () => {
+                    if (selectedImage) {
+                        const imageRef = ref(storage, 'images/' + listingContractAddress);
+                        const metadata = {
+                            contentType: 'image/jpeg'
+                          };
+                        const uploadTask = uploadBytesResumable(imageRef, selectedImage, metadata);
+                        
+                        // Listen for state changes, errors, and completion of the upload.
+                        uploadTask.on('state_changed',
+                        (snapshot) => {
+                            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log('Upload is ' + progress + '% done');
+                            switch (snapshot.state) {
+                                case 'paused':
+                                console.log('Upload is paused');
+                                break;
+                                case 'running':
+                                console.log('Upload is running');
+                                break;
+                            }
+                        }, 
+                        (error) => {
+                            // A full list of error codes is available at
+                            // https://firebase.google.com/docs/storage/web/handle-errors
+                            switch (error.code) {
+                                case 'storage/unauthorized':
+                                // User doesn't have permission to access the object
+                                break;
+                                case 'storage/canceled':
+                                // User canceled the upload
+                                break;
+                                case 'storage/unknown':
+                                // Unknown error occurred, inspect error.serverResponse
+                                break;
+                            }
+                        }, 
+                        () => {
+                            // Upload completed successfully, now we can get the download URL
+                            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                                console.log('File available at', downloadURL);
+                                setDownloadURL(downloadURL);
+                            });
+                            }
+                        );
+        
+                        // Include the imageUrl in your contract transaction if needed
+                        setDoc(doc(db, 'properties', listingContractAddress), {
+                            realEstateName: realEstateName,
+                            targetAmount: targetAmount,
+                            description: description,
+                            propertyAddress: propertyAddress,
+                            downloadURL : downloadURL
+                        });
+                    }
+                }
+            );
 
             Router.pushRoute('/');
         } catch (err) {
@@ -58,7 +151,7 @@ export default function ListingNew() {
                         onChange={(e) =>
                         setRealEstateName(e.target.value.substring(0, 31))
                         }
-                        error={realEstateName > 30}/>
+                        error={realEstateName > 30 || realEstateName < 1}/>
                     </Form.Field>
                     <Form.Field>
                         <label>Address</label>
@@ -66,8 +159,9 @@ export default function ListingNew() {
                         id="address"
                         value={propertyAddress}
                         onChange={(e) =>
-                        setPropertyAddress(e.target.value.substring(0, 120))
-                        }/>
+                        setPropertyAddress(e.target.value.substring(0, 120))}
+                        error={propertyAddress > 500 || propertyAddress < 1}
+                        />
                     </Form.Field>
                     <Form.Field>
                         <label>Description</label>
@@ -76,32 +170,36 @@ export default function ListingNew() {
                         onChange={(e) =>
                         setDescription(e.target.value.substring(0, 120))
                         }
-                        error={description > 500}/>
+                        error={description > 500 || description < 2}/>
                     </Form.Field>
                     <Form.Field>
                         <label>Target Amount (ETH)</label>
                         <Input label="wei" 
+                        type='number'
                         placeholder="Minimum 0.1 ETH"
                         labelPosition="right"
                         value={targetAmount}
                         onChange={(e) => setTargetAmount(parseFloat(e.target.value))}
+                        error={!!targetAmount || targetAmount <= 0}
                         />
                     </Form.Field>
-                    <Form.Input
-                    label="Cover Image"
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => {
-                        if (event.target.files[0]) {
-                          const file = event.target.files[0];
-                          if (file.size < 1000000) {
-                            setImage(file);
-                          } else {
-                            popup("Sorry, file size must be under 1MB");
-                          }
-                        }
-                      }}
+                    <Form.Field>
+                    <label>Document File</label>
+                    <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileChange}
                     />
+                    </Form.Field>
+                    <Card>
+                    {previewUrl && (
+                        <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="ui fluid image"
+                        />
+                    )}
+                    </Card>
                     <Button loading ={loading} primary>List!</Button>
                     <Message error header = "Oops!" content={errorMessage} />
                 </Form>

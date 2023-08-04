@@ -34,8 +34,14 @@ const input = {
   let json = {};
   for (const file of files) {
     const name = file.slice(0, -4);
-    json[name] = output.contracts[file][name];
-    console.log(json);
+    json[name] = {
+      abi: output.contracts[file][name].abi,
+      evm: {
+        bytecode: {
+          object: output.contracts[file][name].evm.bytecode.object,
+        },
+      },
+    };
   }
   
   fs.writeFileSync(

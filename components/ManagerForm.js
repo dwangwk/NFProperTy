@@ -1,114 +1,120 @@
-import React from "react";
-import { Divider, Form, Input, Button } from "semantic-ui-react";
-import { unlistProperty, withdraw } from "../ethereum/functions";
-import { ModalContext } from "./context/ModalContext";
+import React, { Component, useState } from 'react';
+import { Router } from '../routes';
+import { Form, Input, Message, Button } from 'semantic-ui-react';
+import { PropertyListing } from "../ethereum/contracts";
+import web3 from '../web3';
 
-export default function ManagerForm({
-  listingAddress,
-  status,
-  managerAddress,
-  balance,
-  toggleRefreshData,
-}) {
-  const [fields, setFields] = React.useState({
-    targetAmount: "",
-    sharesOffered: "",
-    withdrawAmount: "",
-    dividendAmount: "",
-  });
+const Web3 = require("web3");
+const toWei = (str) => Web3.utils.toWei(`${str}`, "ether");
 
-  const [loading, setLoading] = React.useState(false);
+class ManagerForm extends Component {
 
-  const popup = React.useContext(ModalContext);
+  state = {
+      targetAmount: "",
+      sharesOffered: "",
+      withdrawAmount: "",
+      dividendAmount: "",
+      loading: false,
+      errorMessage: ''
+  };
 
-  const handleUnlistProperty = async (event) => {
+
+  handleUnlistProperty = async (event) => {
     event.preventDefault();
-    setLoading(true);
+    const listing = PropertyListing(this.props.address);
+    const accounts = await web3.eth.getAccounts();
+    this.setState({ loading: true, errorMessage: ''});
     try {
-      await unlistProperty({ campaignAddress });
+      await listing.methods.unlistProperty().send({
+        from: accounts[0]
+      })
+      Router.replaceRoute(`/listings/${this.props.address}/manager`)
     } catch (err) {
       if (err.code === 32000 || err.code === 32603) {
-        popup("Please reset your MetaMask account");
+        this.setState({ errorMessage: "Please reset your MetaMask account"});
       } else {
-        popup(err.message);
+        this.setState({ errorMessage: err.message}) ;
       }
     } finally {
-      setLoading(false);
-      toggleRefreshData();
+      this.setState({ loading: false, value: ''}) ;
     }
   };
 
-  const handleWithdraw = async (event) => {
-    const withdrawAmount = fields.withdrawAmount;
-
+  handleWithdraw = async (event) => {
+    const withdrawAmount = toWei(this.state.withdrawAmount);
     event.preventDefault();
-    setLoading(true);
+    const listing = PropertyListing(this.props.address);
+    const accounts = await web3.eth.getAccounts();
+    this.setState({ loading: true, errorMessage: ''});
     try {
-      await withdraw({ withdrawAmount, listingAddress, managerAddress });
+      await listing.methods.withdraw(withdrawAmount).send({
+        from: accounts[0]
+      });
+      Router.replaceRoute(`/listings/${this.props.address}/manager`);
     } catch (err) {
       if (err.code === 32000 || err.code === 32603) {
-        popup("Please reset your MetaMask account");
+        this.setState({ errorMessage: "Please reset your MetaMask account"});
       } else {
-        popup(err.message);
+        this.setState({ errorMessage: err.message}) ;
       }
     } finally {
-      setLoading(false);
-      setFields({ ...fields, withdrawAmount: "" });
-      toggleRefreshData();
+      this.setState({ loading: false, withdrawAmount:'' });
     }
   };
 
-  return (
-    <div className="container cardborder">
-      <h3>Manage</h3>
-      <br />
-      {status == 0 && (
-        <Button
-          fluid
-          color="red"
-          loading={loading}
-          disabled={loading}
-          onClick={handleUnlistProperty}
-          content={"Unlist Property"}
-        />
-      )}
-      {status == 1 && (
-        <>
-          <Form>
-            <Form.Field>
-              <label>Withdrawal Amount</label>
-              <Input
-                type="number"
-                step={0.1}
-                min={0}
-                max={balance}
-                value={fields.withdrawAmount}
-                onInput={(event) => {}}
-                onChange={(event) =>
-                  setFields({
-                    ...fields,
-                    withdrawAmount: event.target.value,
-                  })
-                }
-                label="ETH"
-                labelPosition="right"
-              />
-            </Form.Field>
-          </Form>
-          <br />
+render() {
+    return (
+      <div className="container cardborder">
+        {this.props.status == 0 && (
           <Button
             fluid
-            primary
-            loading={loading}
-            disabled={loading}
-            onClick={handleWithdraw}
-            content="WITHDRAW"
+            color="red"
+            loading={this.state.loading}
+            disabled={this.state.loading}
+            onClick={this.handleUnlistProperty}
+            content={"Unlist Property"}
           />
-        </>
-      )}
-      {status == 2 && (
-        <Button fluid color="red" disabled content={"LISTING FAILED"} />
-      )}
-    </div>
-  );
+        )}
+        {this.props.status == 1 && (
+          <>
+            <Form>
+              <Form.Field>
+                <label>Withdrawal Amount</label>
+                <Input
+                  type="number"
+                  step={0.1}
+                  min={0}
+                  max={this.state.balance}
+                  value={this.state.withdrawAmount}
+                  onInput={(event) => {}}
+                  onChange={(event) =>
+                    this.setState({
+                      withdrawAmount: event.target.value,
+                    })
+                  }
+                  label="ETH"
+                  labelPosition="right"
+                />
+                <Message error header = "Oops!" content={this.state.errorMessage} />
+              </Form.Field>
+            </Form>
+            <br />
+            <Button
+              fluid
+              primary
+              loading={this.state.loading}
+              disabled={this.state.loading}
+              onClick={this.handleWithdraw}
+              content="Withdraw"
+            />
+          </>
+        )}
+        {this.props.status == 2 && (
+          <Button fluid color="red" disabled content={"Listing failed"} />
+        )}
+      </div>
+    );
+  }
 }
+
+export default ManagerForm;

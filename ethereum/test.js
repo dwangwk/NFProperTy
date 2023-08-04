@@ -1,6 +1,6 @@
 const fs = require("fs-extra");
 const path = require("path");
-const { Web3 } = require('web3');
+const  Web3  = require('web3');
 const ganache = require("ganache");
 const web3 = new Web3(ganache.provider());
 const assert = require("assert");
@@ -34,15 +34,25 @@ beforeEach(async () => {
     //deploy listing producer contract w/ connected account
     producer = await new web3.eth.Contract(ListingProducer.abi)
     .deploy({ data: ListingProducer.evm.bytecode.object })
-    .send({ from: accounts[0], gas: '5000000' });
+    .send({ from: accounts[0], gas: '5000000' })
+    /*.on("receipt", (receipt) => {
+        console.log(receipt);
+    });;*/
 
     //call listingProperty function using producer to create propertylisting instance
-    await producer.methods.listProperty("SOME RANDOM HOUSE","test", "test", toWei("0.01"))
-    .send({ from: accounts[1], gas:'1000000' });
+    const address = await producer.methods.listProperty("SOME RANDOM HOUSE","test", "test", toWei("0.01"))
+    .send({ from: accounts[1], gas:'1000000' })
+    .then(async (receipt) => {
+        const deployedContractAddress = receipt.events.ListProperty.returnValues.listingAddress;
+        console.log(deployedContractAddress);
+    })
+    .catch(error => {
+        console.error(error);
+    });
 
     //get list of propertylistings (view function)
     [listingAddress] = await producer.methods.getListingAddresses().call();
-
+    console.log(listingAddress);
     //get deployed listing contract as a javascript object
     listing = await new web3.eth.Contract(PropertyListing.abi, listingAddress);
     //console.log("listing created");
@@ -107,10 +117,19 @@ describe(' Listings', () => {
             value: toWei("0.04"), 
             from: investor3,
             ...gas});
+        const count = await listing.methods.getInvestorCount().call();
         await listing.methods.unlistProperty().send({
             from: manager,
             ...gas})
             .on("receipt", (receipt) => console.log("closing listing, distributing tokens"));
         
+        const balance1 = await listing.methods.balanceOf(investor).call();
+        const balance2 = await listing.methods.balanceOf(investor2).call();
+        const balance3 = await listing.methods.balanceOf(investor3).call();
+        assert.strictEqual(parseInt(count), 3);
+        assert.strictEqual(parseFloat(fromWei(balance1)), 0.04);
+        assert.strictEqual(parseFloat(fromWei(balance2)), 0.04);
+        assert.strictEqual(parseFloat(fromWei(balance3)), 0.04);
     });
+
 });

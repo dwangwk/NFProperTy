@@ -17,6 +17,7 @@ let managerAddress;
 let balance;
 let targetAmount;
 let status;
+let statusCode;
 
 class ListingShow extends Component {
     
@@ -34,7 +35,8 @@ class ListingShow extends Component {
         managerAddress= summary[5];
         balance= fromWei(summary[6]);
         targetAmount= fromWei(summary[7]);
-        status= summary[8]==='0n'?'Raising Funds':"Property is not currently financing";
+        status= parseInt(summary[8])===0?'Raising Funds':"Property is not currently financing";
+        statusCode = parseInt(summary[8]);
         return summary;
      }
     
@@ -49,8 +51,8 @@ class ListingShow extends Component {
                 header: balance,
                 meta: 'Amount Invested (ETH)',
                 description: `| ${parseInt(
-                    (100 * parseInt(balance)) /
-                      parseInt(targetAmount)
+                    (100 * (balance)) /
+                      (targetAmount)
                   )}% funded`
             },
             {
@@ -78,9 +80,11 @@ class ListingShow extends Component {
                     </Grid.Row>
                     <Grid.Row>
                         <GridColumn>
+                            <Link route={`/listings/${listingAddresss}/manager`} address = { listingAddresss } statusCode = {statusCode}>
                                 <a>
                                     <Button primary>Manager Portal</Button>
                                 </a>
+                            </Link>
                         </GridColumn>
                     </Grid.Row>
                 </Grid>

@@ -8,10 +8,11 @@ contract ListingProducer {
 
     event ListProperty(address indexed listingAddress);
 
-    function listProperty(string calldata name, string calldata description, string calldata propertyAddress, uint256 targetAmount) public {
+    function listProperty(string calldata name, string calldata description, string calldata propertyAddress, uint256 targetAmount) public returns (address) {
         PropertyListing c = new PropertyListing(name, description, propertyAddress, targetAmount, msg.sender);
         ListingAddresses.push(address(c));
         emit ListProperty(address(c));
+        return address(c);
     }
 
     function getListingAddresses() public view returns (address[] memory) {

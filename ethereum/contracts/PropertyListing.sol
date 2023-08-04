@@ -20,7 +20,7 @@ contract PropertyListing {
 
     // funding round
     uint256 public targetAmount;
-    mapping(address => uint256) investment;  
+    mapping(address => uint256) public investment;  
     address[] public investors; //array of unique investors
     uint8 public status;
 
@@ -120,4 +120,9 @@ contract PropertyListing {
             status 
         );
     }
+
+    function getInvestorCount() public view returns(uint count) {
+        return investors.length;
+    }
+
 }
