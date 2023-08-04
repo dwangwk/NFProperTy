@@ -50,7 +50,7 @@ class ListingShow extends Component {
             {
                 header: balance,
                 meta: 'Amount Invested (ETH)',
-                description: `| ${parseInt(
+                description: `Target: ${targetAmount} | ${parseInt(
                     (100 * (balance)) /
                       (targetAmount)
                   )}% funded`

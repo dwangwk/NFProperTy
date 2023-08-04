@@ -68,14 +68,17 @@ export default function ListingNew() {
                 )
             .send({
                 from: account
-            })
-            .then("receipt", async (receipt) => {
-                setListingContractAddress(receipt.events.ListProperty.returnValues.listingAddress);
-                console.log(listingContractAddress);
-            }).then(
-                () => {
+            });
+
+            const event = transactionReceipt.events.ListProperty;
+            
+            if (event) {
+                const listingAddress = event.returnValues.listingAddress;
+                setListingContractAddress(listingAddress);
+                console.log(listingAddress);
+                if (selectedImage) {
                     if (selectedImage) {
-                        const imageRef = ref(storage, 'images/' + listingContractAddress);
+                        const imageRef = ref(storage, 'images/' + listingAddress);
                         const metadata = {
                             contentType: 'image/jpeg'
                           };
@@ -121,7 +124,7 @@ export default function ListingNew() {
                         );
         
                         // Include the imageUrl in your contract transaction if needed
-                        setDoc(doc(db, 'properties', listingContractAddress), {
+                        setDoc(doc(db, 'properties', listingAddress), {
                             realEstateName: realEstateName,
                             targetAmount: targetAmount,
                             description: description,
@@ -130,9 +133,10 @@ export default function ListingNew() {
                         });
                     }
                 }
-            );
-
-            Router.pushRoute('/');
+            } else {
+                console.error("ListProperty event not found in transaction receipt.");
+            }
+            Router.pushRoute('/');  
         } catch (err) {
             setErrorMessage(err.message);
         }
